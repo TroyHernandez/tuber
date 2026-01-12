@@ -9,7 +9,8 @@
 #' @param part Required. One of the following: \code{contentDetails, id,
 #' localizations, player, snippet, status}. Default: \code{contentDetails}.
 #' @param max_results Maximum number of items that should be returned.
-#' Integer. Optional. Can be between 0 and 50. Default is 50.
+#' Integer. Optional. Default is 50. Values over 50 trigger additional
+#' requests and may increase API quota usage.
 #' @param page_token specific page in the result set that should be returned,
 #' optional
 #' @param hl  Language used for text values. Optional. Default is \code{en-US}.
@@ -35,6 +36,9 @@
 #'
 #' get_playlists(filter=c(channel_id="UCMtFAi84ehTSYSE9XoHefig"))
 #' get_playlists(filter=c(channel_id="UCMtFAi84ehTSYSE9X")) # incorrect Channel ID
+#'
+#' # For searching playlists by keyword, use yt_search() instead:
+#' # yt_search(term="tutorial", channel_id="UCMtFAi84ehTSYSE9XoHefig", type="playlist")
 #' }
 
 get_playlists <- function(filter = NULL,
@@ -42,31 +46,47 @@ get_playlists <- function(filter = NULL,
                           max_results = 50, hl = NULL,
                           page_token = NULL, simplify = TRUE, ...) {
 
-  if (max_results < 0 | max_results > 50) {
-    stop("max_results only takes a value between 0 and 50.")
-  }
+  # Modern validation using checkmate
+  assert_integerish(max_results, len = 1, lower = 1, .var.name = "max_results")
+  assert_character(filter, len = 1, .var.name = "filter")
+  assert_choice(names(filter), c("channel_id", "playlist_id"),
+                .var.name = "filter names (must be 'channel_id' or 'playlist_id')")
+  assert_character(part, len = 1, min.chars = 1, .var.name = "part")
+  assert_logical(simplify, len = 1, .var.name = "simplify")
 
-  valid_filters <- c("channel_id", "playlist_id")
-  if (!(names(filter) %in% valid_filters)) {
-    stop("filter can only take one of the following values: ", paste(valid_filters, collapse = ", "))
+  if (!is.null(hl)) {
+    assert_character(hl, len = 1, min.chars = 1, .var.name = "hl")
   }
-
-  if (length(filter) != 1) {
-    stop("filter must be a vector of length 1.")
+  if (!is.null(page_token)) {
+    assert_character(page_token, len = 1, min.chars = 1, .var.name = "page_token")
   }
 
   translate_filter <- c(channel_id = "channelId", playlist_id = "id")
   yt_filter_name <- translate_filter[names(filter)]
   names(filter) <- yt_filter_name
 
-  querylist <- list(part = part, maxResults = max_results,
+  querylist <- list(part = part, maxResults = min(max_results, 50),
                     pageToken = page_token, hl = hl)
   querylist <- c(querylist, filter)
 
   raw_res <- tuber_GET("playlists", querylist, ...)
+  items <- raw_res$items
+  next_token <- raw_res$nextPageToken
+
+  while (length(items) < max_results && !is.null(next_token)) {
+    querylist$pageToken <- next_token
+    querylist$maxResults <- min(50, max_results - length(items))
+    a_res <- tuber_GET("playlists", querylist, ...)
+    items <- c(items, a_res$items)
+    next_token <- a_res$nextPageToken
+  }
+
+  raw_res$items <- items
 
   if (length(raw_res$items) == 0) {
-    cat("No playlists available.\n")
+    warn("No playlists available",
+         filter = filter,
+         class = "tuber_playlists_empty")
     if (simplify) return(data.frame())
     return(list())
   }

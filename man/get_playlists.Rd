@@ -25,7 +25,8 @@ potential names of the entry in the vector:
 localizations, player, snippet, status}. Default: \code{contentDetails}.}
 
 \item{max_results}{Maximum number of items that should be returned.
-Integer. Optional. Can be between 0 and 50. Default is 50.}
+Integer. Optional. Default is 50. Values over 50 trigger additional
+requests and may increase API quota usage.}
 
 \item{hl}{Language used for text values. Optional. Default is \code{en-US}.
 For other allowed language codes, see \code{\link{list_langs}}.}
@@ -56,6 +57,9 @@ Get Playlists
 
 get_playlists(filter=c(channel_id="UCMtFAi84ehTSYSE9XoHefig"))
 get_playlists(filter=c(channel_id="UCMtFAi84ehTSYSE9X")) # incorrect Channel ID
+
+# For searching playlists by keyword, use yt_search() instead:
+# yt_search(term="tutorial", channel_id="UCMtFAi84ehTSYSE9XoHefig", type="playlist")
 }
 }
 \references{

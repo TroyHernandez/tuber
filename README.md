@@ -2,9 +2,11 @@
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 ## :sweet\_potato: tuber: Access YouTube API via R
-
+[![CI](https://github.com/gojiplus/tuber/actions/workflows/ci.yml/badge.svg)](https://github.com/gojiplus/tuber/actions/workflows/ci.yml)
 [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/tuber)](https://cran.r-project.org/package=tuber)
 ![](http://cranlogs.r-pkg.org/badges/grand-total/tuber)
+[![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://gojiplus.github.io/tuber/)
+
 
 Access YouTube API via R. Get comments posted on YouTube videos, get
 information on how many times a video has been liked, search for videos
@@ -22,9 +24,7 @@ devtools::install_github("soodoku/tuber", build_vignettes = TRUE)
 ```
 
 To get a quick overview of some important functions in tuber, check out
-[this article](https://soodoku.github.io/tuber/articles/tuber-ex.html).
-For a fun vignette about how to analyze emojis in YouTube comments, see
-[here](https://soodoku.github.io/tuber/articles/emoji_vignette.html).
+[this article](https://gojiplus.github.io/tuber/articles/tuber-ex.html).
 
 ### Using tuber
 
@@ -39,6 +39,13 @@ Guide](https://developers.google.com/youtube/v3/guides/authentication).
 ``` r
 yt_oauth("app_id", "app_password")
 ```
+
+If your session cannot open a browser window for authentication, pass
+`use_oob = TRUE` to `yt_oauth()` so that authentication can be completed
+via an out-of-band code.
+
+To force re-authentication at any time, delete the `.httr-oauth` file in
+your working directory.
 
 **Note:** If you are on ubuntu, you may have to run the following before
 doing anything:

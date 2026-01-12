@@ -6,6 +6,11 @@
 #' to TRUE. By default, it is set to FALSE.
 #' The function launches a browser to allow you to authorize the application
 #'
+#' If a browser cannot be opened, pass \code{use_oob = TRUE} to
+#' \code{yt_oauth()} so authentication can be completed using an
+#' out-of-band code.
+#' Delete the \code{.httr-oauth} file in the working directory to force
+#' re-authentication.
 #' @param app_id client id; required; no default
 #' @param app_secret client secret; required; no default
 #' @param scope Character. \code{ssl}, \code{basic},
@@ -36,18 +41,46 @@
 #' }
 
 yt_oauth <- function(app_id = NULL, app_secret = NULL, scope = "ssl", token = ".httr-oauth", ...) {
-  # if (file.exists(token)) {
-  #   google_token <- tryCatch(
-  #     suppressWarnings(readRDS(token)),
-  #     error = function(e) {
-  #       warning(sprintf("Unable to read token from: %s", token))
-  #       NULL
-  #     }
-  #   )
-  # }
 
-  # if (!file.exists(token) || (file.exists(token) && is.null(google_token))) {
-  #   stopifnot(!is.null(app_id), !is.null(app_secret))
+  # Modern validation using checkmate
+  if (!is.null(app_id)) {
+    assert_character(app_id, len = 1, min.chars = 1, .var.name = "app_id")
+  }
+
+  if (!is.null(app_secret)) {
+    assert_character(app_secret, len = 1, min.chars = 1, .var.name = "app_secret")
+  }
+
+  assert_choice(scope, c("ssl", "basic", "own_account_readonly",
+                         "upload_and_manage_own_videos", "partner", "partner_audit"),
+                .var.name = "scope")
+  assert_character(token, len = 1, min.chars = 1, .var.name = "token")
+
+  # Try to read existing token first
+  google_token <- NULL
+  if (file.exists(token)) {
+    google_token <- tryCatch({
+      suppressWarnings(readRDS(token))
+    }, error = function(e) {
+      warn("Unable to read existing OAuth token",
+           token_file = token,
+           error = e$message,
+           help = "You may need to re-authenticate",
+           class = "tuber_token_read_error")
+      NULL
+    })
+  }
+
+  # Create new token if none exists or reading failed
+  if (!file.exists(token) || is.null(google_token)) {
+    if (is.null(app_id) || is.null(app_secret)) {
+      abort("app_id and app_secret are required for new authentication",
+            have_token_file = file.exists(token),
+            help = c("Get OAuth credentials from Google Cloud Console",
+                     "Visit: https://console.cloud.google.com/apis/credentials"),
+            class = "tuber_oauth_credentials_required")
+    }
+
     myapp <- oauth_app("google", key = app_id, secret = app_secret)
     scope <- match.arg(scope, c(
       "ssl", "basic", "own_account_readonly",
@@ -61,8 +94,21 @@ yt_oauth <- function(app_id = NULL, app_secret = NULL, scope = "ssl", token = ".
       partner_audit = "https://www.googleapis.com/auth/youtubepartner-channel-audit",
       partner = "https://www.googleapis.com/auth/youtubepartner"
     )
+
     google_token <- oauth2.0_token(oauth_endpoints("google"), myapp, scope = scope_url, ...)
-  # }
+
+    # Try to save the token for future use
+    tryCatch({
+      saveRDS(google_token, file = token)
+    }, error = function(e) {
+      warn("Could not save OAuth token to file",
+           token_file = token,
+           error = e$message,
+           help = "Check file permissions in working directory",
+           class = "tuber_token_save_error")
+    })
+  }
 
   options(google_token = google_token)
+  invisible(google_token)
 }
