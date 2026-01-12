@@ -31,25 +31,7 @@ NULL
 #' @keywords internal
 "_PACKAGE"
 
-#' Null coalescing operator
-#'
-#' Returns the right-hand side if the left-hand side is NULL or has length 0.
-#'
-#' @param x Left-hand side value
-#' @param y Right-hand side value (default if x is NULL/empty)
-#' @return x if x is not NULL and has length > 0, otherwise y
-#' @export
-#' @name null-coalesce
-#' @rdname null-coalesce
-#' @examples
-#' \dontrun{
-#' NULL %||% "default"  # Returns "default"
-#' "value" %||% "default"  # Returns "value"
-#' character(0) %||% "default"  # Returns "default"
-#' }
-`%||%` <- function(x, y) {
-  if (is.null(x) || length(x) == 0) y else x
-}
+# Note: %||% is imported from rlang (also available in base R 4.4+)
 
 #' Add standardized metadata attributes to API response
 #'
